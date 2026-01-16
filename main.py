@@ -1,88 +1,92 @@
 import speech_recognition as sr
 import pyttsx3
+from datetime import datetime
 
-# Initialize recognizer
+# ---------------- INITIALIZE ----------------
 r = sr.Recognizer()
 
-# ---------- SPEAK FUNCTION (FIXED & STABLE) ----------
+# 🔧 LISTENING TUNING (IMPORTANT)
+r.energy_threshold = 300
+r.dynamic_energy_threshold = False
+r.pause_threshold = 1.0
+r.non_speaking_duration = 0.7
+
 def speak(text):
-    print("AI:", text)
+    print("JARVIS:", text)
     engine = pyttsx3.init('sapi5')
     engine.setProperty('rate', 140)
     engine.setProperty('volume', 1.0)
 
     voices = engine.getProperty('voices')
-    engine.setProperty('voice', voices[0].id)  # male voice
+    engine.setProperty('voice', voices[0].id)
 
     engine.say(text)
     engine.runAndWait()
     engine.stop()
-# ----------------------------------------------------
 
-# ---------- MICROPHONE LIST (DEBUG) ----------
-def list_microphones():
-    try:
-        names = sr.Microphone.list_microphone_names()
-        print("Available microphone devices:")
-        for i, name in enumerate(names):
-            print(f"  [{i}] {name}")
-    except Exception as e:
-        print("Could not enumerate microphones:", e)
+# ---------------- MEMORY ----------------
+memory = {
+    "user_name": "Pankaj"
+}
 
-list_microphones()
-
-# ---------- MIC CALIBRATION (ONCE) ----------
+# ---------------- MIC CALIBRATION (ONCE) ----------------
 with sr.Microphone() as source:
-    print("Calibrating microphone...")
-    r.adjust_for_ambient_noise(source, duration=1)
+    print("Calibrating microphone... please stay silent")
+    r.adjust_for_ambient_noise(source, duration=1.2)
     print("Calibration complete")
 
-speak("N Stark AI is now active")
+speak("Jarvis is online and ready")
 
-# ---------- MAIN LOOP ----------
+# ---------------- MAIN LOOP ----------------
 while True:
     try:
         with sr.Microphone() as source:
             print("Listening...")
-            try:
-                audio = r.listen(source, timeout=4, phrase_time_limit=6)
-            except sr.WaitTimeoutError:
-                print("Listening timed out")
-                speak("I did not hear anything. Please try again.")
-                continue
+            audio = r.listen(
+                source,
+                timeout=3,
+                phrase_time_limit=4
+            )
 
         try:
             command = r.recognize_google(audio).lower()
             print("You said:", command)
         except sr.UnknownValueError:
             print("Could not understand audio")
-            speak("Sorry, I could not understand you. Please repeat.")
+            speak("Please say that again clearly")
             continue
         except sr.RequestError:
-            print("Network error")
-            speak("Network error. Please check your internet.")
+            speak("Network error")
             continue
 
-        # ---------- COMMANDS ----------
-        if "your name" in command:
-            speak("My name is N Stark AI")
+        # ---------------- COMMANDS ----------------
+
+        if "hello" in command:
+            speak(f"Hello {memory['user_name']}, nice to hear you")
 
         elif "who am i" in command:
-            speak("You are Pankaj, my creator")
+            speak(f"You are {memory['user_name']}")
 
-        elif "hello" in command:
-            speak("Hello Pankaj, nice to hear you")
+        elif "your name" in command:
+            speak("My name is Jarvis")
+
+        elif "time" in command:
+            current_time = datetime.now().strftime("%I:%M %p")
+            speak(f"The time is {current_time}")
+
+        elif "what is the date" in command:
+            today = datetime.now().strftime("%B %d, %Y")
+            speak(f"Today is {today}")
 
         elif "exit" in command or "stop" in command or "quit" in command:
-            speak("Goodbye sir, see you later")
+            speak("Goodbye. Shutting down.")
             break
 
         else:
-            speak("Sorry sir, can you repeat that again")
+            speak("I am still learning. Please try another command")
 
+    except sr.WaitTimeoutError:
+        continue
     except KeyboardInterrupt:
-        speak("Shutting down. Goodbye")
+        speak("Shutting down. Goodbye.")
         break
-    except Exception as e:
-        print("Unexpected error:", e)
-        speak("An unexpected error occurred")
