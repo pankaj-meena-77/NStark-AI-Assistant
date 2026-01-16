@@ -1,22 +1,25 @@
 import speech_recognition as sr
 import pyttsx3
 
-# Initialize
+# Initialize recognizer
 r = sr.Recognizer()
-engine = pyttsx3.init('sapi5')
 
-engine.setProperty('rate', 140)
-engine.setProperty('volume', 1.0)
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[0].id)
-
-
+# ---------- SPEAK FUNCTION (FIXED & STABLE) ----------
 def speak(text):
     print("AI:", text)
+    engine = pyttsx3.init('sapi5')
+    engine.setProperty('rate', 140)
+    engine.setProperty('volume', 1.0)
+
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[0].id)  # male voice
+
     engine.say(text)
     engine.runAndWait()
+    engine.stop()
+# ----------------------------------------------------
 
-
+# ---------- MICROPHONE LIST (DEBUG) ----------
 def list_microphones():
     try:
         names = sr.Microphone.list_microphone_names()
@@ -26,21 +29,26 @@ def list_microphones():
     except Exception as e:
         print("Could not enumerate microphones:", e)
 
-
 list_microphones()
+
+# ---------- MIC CALIBRATION (ONCE) ----------
+with sr.Microphone() as source:
+    print("Calibrating microphone...")
+    r.adjust_for_ambient_noise(source, duration=1)
+    print("Calibration complete")
+
 speak("N Stark AI is now active")
 
-
+# ---------- MAIN LOOP ----------
 while True:
     try:
         with sr.Microphone() as source:
             print("Listening...")
-            r.adjust_for_ambient_noise(source, duration=1)
             try:
-                audio = r.listen(source, timeout=5, phrase_time_limit=8)
+                audio = r.listen(source, timeout=4, phrase_time_limit=6)
             except sr.WaitTimeoutError:
-                print("Listening timed out (no speech detected)")
-                speak("I didn't hear anything. Please try again.")
+                print("Listening timed out")
+                speak("I did not hear anything. Please try again.")
                 continue
 
         try:
@@ -48,13 +56,14 @@ while True:
             print("You said:", command)
         except sr.UnknownValueError:
             print("Could not understand audio")
-            speak("Sorry, I couldn't understand you. Please repeat.")
+            speak("Sorry, I could not understand you. Please repeat.")
             continue
-        except sr.RequestError as e:
-            print("Speech recognition request failed:", e)
-            speak("Network error or speech service unavailable")
+        except sr.RequestError:
+            print("Network error")
+            speak("Network error. Please check your internet.")
             continue
 
+        # ---------- COMMANDS ----------
         if "your name" in command:
             speak("My name is N Stark AI")
 
@@ -76,4 +85,4 @@ while True:
         break
     except Exception as e:
         print("Unexpected error:", e)
-        speak("An unexpected error occurred. Check the console for details")
+        speak("An unexpected error occurred")
