@@ -7,6 +7,8 @@ import webbrowser
 import wikipedia
 import json
 import time
+MUSIC_DIR = "C:\\Users\\ASUS\\Music"
+
 from datetime import datetime
 
 # ---------------- CONFIG ----------------
@@ -23,6 +25,10 @@ def load_memory():
         except:
             pass
     return {"user_name": "Pankaj"}
+def save_memory(memory):
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(memory, f, indent=4)
+
 
 memory = load_memory()
 
@@ -100,21 +106,71 @@ while True:
             command = listen_command()
             if not command:
                 continue
-
+                
             active_until = time.time() + ACTIVE_TIME
-
+   
             # ---------------- COMMANDS ----------------
             if "hello" in command:
                 speak(f"Hello {memory['user_name']}")
+            elif "open chrome" in command:
+                speak("Opening Google Chrome")
+                os.startfile("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
+
+            elif "close chrome" in command:
+                speak("Closing Google Chrome")
+                os.system("taskkill /im chrome.exe /f")
+
+            elif "open vs code" in command:
+                speak("Opening Visual Studio Code")
+                os.startfile("C:\\Users\\ASUS\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe")
+
+            elif "close vs code" in command:
+                speak("Closing Visual Studio Code")
+                os.system("taskkill /im Code.exe /f")
+
+            elif "play music" in command:
+                songs = os.listdir(MUSIC_DIR)
+                if songs:
+                    song_path = os.path.join(MUSIC_DIR, songs[0])
+                    speak("Playing music")
+                    try:
+                        os.startfile(song_path)
+                    except Exception:
+                        os.system(f'start "" "{song_path}"')
+                else:
+                    speak("No music files found")
+
+            elif "stop music" in command:
+                speak("Stopping music")
+                os.system("taskkill /im wmplayer.exe /f")
+
 
             elif "who am i" in command:
                 speak(f"You are {memory['user_name']}")
-
+               
             elif "your name" in command:
                 speak("My name is Jarvis")
 
             elif "time" in command:
                 speak(datetime.now().strftime("The time is %I:%M %p"))
+
+            elif "remember that" in command:
+                fact = command.replace("remember that", "").strip()
+                if fact:
+                    memory["note"] = fact
+                    save_memory(memory)
+                    speak("I will remember that")
+                else:
+                    speak("What should I remember")
+
+            elif "what do you remember" in command:
+                note = memory.get("note")
+                if note:
+                    speak(f"You asked me to remember that {note}")
+                else:
+                    speak("I do not remember anything yet")
+
+            
 
             elif "date" in command:
                 speak(datetime.now().strftime("Today is %B %d, %Y"))
