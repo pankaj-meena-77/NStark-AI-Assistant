@@ -7,9 +7,18 @@ import webbrowser
 import wikipedia
 import json
 import time
+import random
+
 MUSIC_DIR = "C:\\Users\\ASUS\\Music"
 
 from datetime import datetime
+fallback_responses = [
+    "I am not sure about that yet",
+    "Can you rephrase that",
+    "I am still learning this",
+    "I did not understand clearly"
+]
+
 
 # ---------------- CONFIG ----------------
 wikipedia.set_lang("en")
@@ -35,6 +44,8 @@ memory = load_memory()
 # ---------------- CONTEXT MEMORY ----------------
 last_response = ""
 last_wiki_query = ""
+in_conversation = False
+
 
 # ---------------- SPEAK FUNCTION ----------------
 def speak(text):
@@ -65,14 +76,14 @@ def listen_for_wake_word():
     try:
         wake_text = r.recognize_google(audio).lower()
         print("Heard:", wake_text)
-        return "jarvis" in wake_text
+        return wake_text.strip() == "jarvis"
     except:
         return False
 
 def listen_command():
     with sr.Microphone() as source:
         print("Listening for command...")
-        audio = r.listen(source, timeout=5, phrase_time_limit=7)
+        audio = r.listen(source, timeout=5, phrase_time_limit=6)
 
     try:
         command = r.recognize_google(audio).lower()
@@ -100,6 +111,8 @@ while True:
 
         speak("Yes?")
         active_until = time.time() + ACTIVE_TIME
+        in_conversation = True
+
 
         # ---- ACTIVE MODE ----
         while time.time() < active_until:
@@ -213,6 +226,12 @@ while True:
                 speak("Opening YouTube")
                 webbrowser.open("https://www.youtube.com")
 
+            elif "close youtube" in command:
+                speak("Closing YouTube")
+                os.system("taskkill /f /im chrome.exe")
+                os.system("taskkill /f /im msedge.exe")
+                os.system("taskkill /f /im firefox.exe")
+
             elif "sleep" in command:
                 speak("Going to sleep")
                 break
@@ -222,7 +241,10 @@ while True:
                 exit()
 
             else:
-                speak("I am still learning")
+                speak(random.choice(fallback_responses))
+
+            in_conversation = False
+
 
         speak("I am going to sleep now")
 
