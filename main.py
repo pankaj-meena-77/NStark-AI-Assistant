@@ -8,6 +8,8 @@ import wikipedia
 import json
 import time
 import random
+import sys
+
 
 MUSIC_DIR = "C:\\Users\\ASUS\\Music"
 
@@ -24,6 +26,8 @@ fallback_responses = [
 wikipedia.set_lang("en")
 MEMORY_FILE = "memory.json"
 ACTIVE_TIME = 50  # seconds Jarvis stays awake after wake word
+COMMAND_COOLDOWN = 1.5  # seconds
+last_command_time = 0
 
 # ---------------- MEMORY ----------------
 def load_memory():
@@ -93,6 +97,12 @@ def listen_command():
         return ""
     except sr.RequestError:
         return ""
+        def run_command_safely(func):
+          try:
+                func()
+          except Exception as e:
+                print("Command error:", e)
+                speak("Something went wrong while executing the command")
 
 # ---------------- MIC CALIBRATION ----------------
 with sr.Microphone() as source:
@@ -119,7 +129,17 @@ while True:
             command = listen_command()
             if not command:
                 continue
-                
+            current_time = time.time()
+            if current_time - last_command_time < COMMAND_COOLDOWN:
+                continue
+            elif "restart yourself" in command or "restart jarvis" in command:
+                speak("Restarting")
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+
+
+            last_command_time = current_time
+
             active_until = time.time() + ACTIVE_TIME
    
             # ---------------- COMMANDS ----------------
@@ -238,15 +258,15 @@ while True:
 
             elif "exit" in command or "quit" in command or "stop" in command:
                 speak("Goodbye. Shutting down.")
-                exit()
+                break
 
             else:
                 speak(random.choice(fallback_responses))
 
-            in_conversation = False
-
 
         speak("I am going to sleep now")
+        in_conversation = False
+
 
     except KeyboardInterrupt:
         speak("Shutting down. Goodbye.")
