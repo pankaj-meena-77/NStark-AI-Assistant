@@ -28,6 +28,10 @@ MEMORY_FILE = "memory.json"
 ACTIVE_TIME = 50  # seconds Jarvis stays awake after wake word
 COMMAND_COOLDOWN = 1.5  # seconds
 last_command_time = 0
+LAST_COMMAND_TEXT = ""
+DUPLICATE_WINDOW = 2.0  # seconds to ignore identical repeated commands
+last_tts_time = 0
+TTS_MUTE_WINDOW = 0.8
 
 # ---------------- MEMORY ----------------
 def load_memory():
@@ -54,22 +58,34 @@ in_conversation = False
 # ---------------- SPEAK FUNCTION ----------------
 def speak(text):
     global last_response
+    global last_tts_time
     last_response = text
 
     print("JARVIS:", text)
-    engine = pyttsx3.init("sapi5")
-    engine.setProperty("rate", 140)
-    engine.setProperty("volume", 1.0)
-    voices = engine.getProperty("voices")
-    engine.setProperty("voice", voices[0].id)
-    engine.say(text)
-    engine.runAndWait()
-    engine.stop()
+    try:
+        engine.say(text)
+        engine.runAndWait()
+    except Exception:
+        # fallback: print only if TTS fails
+        print("TTS error, unable to speak")
+    # small pause to avoid recognizer picking up TTS audio
+    last_tts_time = time.time()
+    time.sleep(0.6)
 
 # ---------------- SPEECH RECOGNITION ----------------
 r = sr.Recognizer()
 r.energy_threshold = 300
 r.pause_threshold = 0.8
+
+# initialize TTS engine once
+try:
+    engine = pyttsx3.init("sapi5")
+    engine.setProperty("rate", 140)
+    engine.setProperty("volume", 1.0)
+    voices = engine.getProperty("voices")
+    engine.setProperty("voice", voices[0].id)
+except Exception:
+    engine = None
 
 # ---------------- WAKE WORD ----------------
 def listen_for_wake_word():
@@ -85,6 +101,14 @@ def listen_for_wake_word():
         return False
 
 def listen_command():
+    # If we recently spoke, wait a bit to avoid capturing TTS audio
+    try:
+        since = time.time() - last_tts_time
+    except Exception:
+        since = 999
+    if since < TTS_MUTE_WINDOW:
+        time.sleep(TTS_MUTE_WINDOW - since + 0.05)
+
     with sr.Microphone() as source:
         print("Listening for command...")
         audio = r.listen(source, timeout=5, phrase_time_limit=6)
@@ -97,12 +121,18 @@ def listen_command():
         return ""
     except sr.RequestError:
         return ""
-        def run_command_safely(func):
-          try:
-                func()
-          except Exception as e:
-                print("Command error:", e)
-                speak("Something went wrong while executing the command")
+
+
+# safe wrapper for running commands
+def run_command_safely(func):
+    try:
+        func()
+    except Exception as e:
+        print("Command error:", e)
+        try:
+            speak("Something went wrong while executing the command")
+        except Exception:
+            pass
 
 # ---------------- MIC CALIBRATION ----------------
 with sr.Microphone() as source:
@@ -130,6 +160,10 @@ while True:
             if not command:
                 continue
             current_time = time.time()
+            # ignore identical repeated commands within short window
+            if command == LAST_COMMAND_TEXT and current_time - last_command_time < DUPLICATE_WINDOW:
+                print("Ignored duplicate command:", command)
+                continue
             if current_time - last_command_time < COMMAND_COOLDOWN:
                 continue
             elif "restart yourself" in command or "restart jarvis" in command:
@@ -139,6 +173,7 @@ while True:
 
 
             last_command_time = current_time
+            LAST_COMMAND_TEXT = command
 
             active_until = time.time() + ACTIVE_TIME
    
