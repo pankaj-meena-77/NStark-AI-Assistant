@@ -1,9 +1,22 @@
-# Virtual environment
-.venv/
-
-# Python cache
+# ================= Python =================
 __pycache__/
 *.pyc
+*.pyo
 
-# VS Code settings
+# ================= Virtual Env =================
+.venv/
+env/
+
+# ================= Audio Files =================
+*.mp3
+*.wav
+
+# ================= VS Code =================
 .vscode/
+
+# ================= OS =================
+.DS_Store
+Thumbs.db
+
+# ================= Secrets (future) =================
+.env
